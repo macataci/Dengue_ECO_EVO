@@ -1,4 +1,5 @@
 from opqua.model import Model
+
 #####-------------------------------------------------------- fitness--------------------------------------------------
 """
 Host-host transmission model with susceptible and infected hosts in a single
@@ -66,12 +67,13 @@ model.addPathogensToHosts( 'my_population',{'BADD':10} )
     # optimal genome, "BEST", which outcompetes all others.
 model.run(0,200)
 data = model.saveToDataFrame(
-    'fitness_function_mutation_example.csv'
+    '../../../output/EVOLUTION/fitness_function_mutation_example.csv'
     )
+
 
 graph_composition = model.compositionPlot(
         # Create a plot to track pathogen genotypes across time.
-    'fitness_function_mutation_example_composition.png', data,
+    '../../../figs/EVOLUTION/fitness_function_mutation_example_composition.png', data,
     num_top_sequences=6,
         # Track the 6 most represented genomes overall (remaining genotypes are
         # lumped into the "Other" category).
@@ -80,8 +82,8 @@ graph_composition = model.compositionPlot(
     )
 
 graph_clustermap = model.clustermap(
-    'fitness_function_mutation_example_clustermap.png', data,
-    save_data_to_file='fitness_function_mutation_example_pairwise_distances.csv',
+    '../../../figs/EVOLUTION/fitness_function_mutation_example_clustermap.png', data,
+    save_data_to_file='../../../output/EVOLUTION/fitness_function_mutation_example_pairwise_distances.csv',
     num_top_sequences=15,
     track_specific_sequences=['BADD']
     )
@@ -90,7 +92,7 @@ graph_clustermap = model.clustermap(
     # outputs the pairwise distance matrix to a csv file as well.
 
 graph_compartments = model.compartmentPlot(
-    'fitness_function_example_reassortment_compartments.png', data
+    '../../../figs/EVOLUTION/fitness_function_example_reassortment_compartments.png', data
     )
     # Also generate a normal compartment plot. Notice the total number of
     # infections in the composition plot can exceed the number of infected hosts

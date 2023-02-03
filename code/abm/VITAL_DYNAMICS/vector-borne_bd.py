@@ -37,7 +37,7 @@ my_model.addPathogensToHosts( 'my_population',{'AAAAAAAAAA':20} )
     # population "my_population".
 
 my_model.run(0,200) # Run the simulation for 200 time units.
-data = my_model.saveToDataFrame('vector-borne_birth-death_example.csv')
+data = my_model.saveToDataFrame('../../../output/VITAL_DYNAMICS/vector-borne_birth-death_example.csv')
     # Save the model results to a table.
-graph = my_model.compartmentPlot('vector-borne_birth-death_example.png', data)
+graph = my_model.compartmentPlot('../../../figs/VITAL_DYNAMICS/vector-borne_birth-death_example.png', data)
     # Plot the number of susceptible and infected hosts in the model over time.
