@@ -69,23 +69,23 @@ model.addPathogensToHosts( 'my_population',{'BADD/BEST/BADD/BEST':10} )
     # be outcompeted by more optimal pathogen genotypes, culminating in the
     # optimal genome, which outcompetes all others.
 model.run(0,500,time_sampling=100)
-data = model.saveToDataFrame('transmissibility_function_reassortment_example.csv')
+data = model.saveToDataFrame('../../../output/EVOLUTION/transmissibility_function_reassortment_example.csv')
 
 graph_composition = model.compositionPlot(
         # Create a plot to track pathogen genotypes across time.
-    'transmissibility_function_reassortment_example_composition.png', data
+    '../../../figs/EVOLUTION/transmissibility_function_reassortment_example_composition.png', data
     )
 
 graph_clustermap = model.clustermap(
-    'transmissibility_function_reassortment_example_clustermap.png', data,
-    save_data_to_file='transmissibility_function_reassortment_example_pairwise_distances.csv',
+    '../../../figs/EVOLUTION/transmissibility_function_reassortment_example_clustermap.png', data,
+    save_data_to_file='../../../output/EVOLUTION/transmissibility_function_reassortment_example_pairwise_distances.csv',
     num_top_sequences=24
     )
     # Generate a heatmap and dendrogram for the top 24 genomes. Besides creating
     # the plot, outputs the pairwise distance matrix to a csv file as well.
 
 graph_compartments = model.compartmentPlot(
-    'transmissibility_function_reassortment_example_compartments.png', data
+    '../../../figs/EVOLUTION/transmissibility_function_reassortment_example_compartments.png', data
     )
     # Also generate a normal compartment plot. Notice the total number of
     # infections in the composition plot can exceed the number of infected hosts
