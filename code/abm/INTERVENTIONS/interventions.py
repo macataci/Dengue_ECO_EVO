@@ -93,10 +93,10 @@ model.newIntervention(
     # with a 'GGGGGGGGGG' sequence in their genome.
 
 output = model.run(0,400)
-data = model.saveToDataFrame('../../../output/intervention_examples.csv')
-graph = model.compositionPlot('../../../figs/intervention_examples_composition.png', data )
+data = model.saveToDataFrame('../../../output/INTERVENTIONS/intervention_examples.csv')
+graph = model.compositionPlot('../../../figs/INTERVENTIONS/intervention_examples_composition.png', data )
     # Create a plot to track pathogen genotypes across time.
-graph = model.compartmentPlot('../../../figs/intervention_examples_compartments.png', data)
+graph = model.compartmentPlot('../../../figs/INTERVENTIONS/intervention_examples_compartments.png', data)
     # Also generate a normal compartment plot. Notice the total number of
     # infections in the composition plot can exceed the number of infected hosts
     # in the compartment plot. This happens because a single host infected by
