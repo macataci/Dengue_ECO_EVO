@@ -55,6 +55,10 @@ model.newIntervention(
     # At time 150, selects 100% of infected hosts and stores them under the
     # group ID 'treated_hosts'. The third argument selects all hosts available
     # when set to -1, as above.
+
+    #todo por que treated si estan infected jaja
+    # ahta seguro mas adelante les quita lo infected
+
 model.newIntervention(
     150, 'newVectorGroup',
     [ 'my_population', 'treated_vectors', -1, 'infected' ]
@@ -62,6 +66,7 @@ model.newIntervention(
     # At time 150, selects 100% of infected vectors and stores them under the
     # group ID 'treated_vectors'. The third argument selects all vectors
     # available when set to -1, as above.
+
 model.newIntervention(
     150, 'treatHosts',
     [ 'my_population', 1, 'GGGGGGGGGG', 'treated_hosts' ]
@@ -87,6 +92,7 @@ model.newIntervention(
     250, 'protectHosts',
     [ 'my_population', 1, 'GGGGGGGGGG', 'vaccinated' ]
     )
+
 # model.newIntervention( 250, model.protectHosts, [ 'my_population', 1, 'C', 'vaccinated' ] )
 # model.newIntervention( 250, model.protectHosts, [ 'my_population', 1, 'T', 'vaccinated' ] )
     # At time 250, protects 100% of the vaccinated group from pathogens

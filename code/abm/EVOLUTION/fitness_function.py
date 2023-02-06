@@ -33,7 +33,7 @@ def myHostFitness(genome):
         )
         #peak genome con el que se quiere medir distancia
         #TODO cómo funciona ese valor mínimo?
-        #TODO dice que retorna genome phenotype pero retorna es un númoer?
+        #TODO dice que retorna genome phenotype pero retorna es un númber? ese es el phenotype
 
 
 
@@ -77,9 +77,14 @@ graph_composition = model.compositionPlot(
     num_top_sequences=6,
         # Track the 6 most represented genomes overall (remaining genotypes are
         # lumped into the "Other" category).
+
+    #TODO mira esto con el genotype value, de la peak
     track_specific_sequences=['BADD']
         # Include the initial genome in the graph if it isn't in the top 6.
     )
+
+# TODO est composition plot tiene más infecciones para BETT que para BEDT, por que? deberían tener la misma distance
+
 
 graph_clustermap = model.clustermap(
     '../../../figs/EVOLUTION/fitness_function_mutation_example_clustermap.png', data,
@@ -90,6 +95,8 @@ graph_clustermap = model.clustermap(
     # Generate a heatmap and dendrogram for the top 15 genomes, include the
     # ancestral genome "BADD" in the phylogeny. Besides creating the plot,
     # outputs the pairwise distance matrix to a csv file as well.
+
+
 
 graph_compartments = model.compartmentPlot(
     '../../../figs/EVOLUTION/fitness_function_example_reassortment_compartments.png', data

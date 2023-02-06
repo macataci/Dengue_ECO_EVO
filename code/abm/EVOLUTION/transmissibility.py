@@ -76,12 +76,15 @@ graph_composition = model.compositionPlot(
     '../../../figs/EVOLUTION/transmissibility_function_reassortment_example_composition.png', data
     )
 
+
 graph_clustermap = model.clustermap(
     '../../../figs/EVOLUTION/transmissibility_function_reassortment_example_clustermap.png', data,
     save_data_to_file='../../../output/EVOLUTION/transmissibility_function_reassortment_example_pairwise_distances.csv',
     num_top_sequences=24
     )
     # Generate a heatmap and dendrogram for the top 24 genomes. Besides creating
+    #todo 24 genomes?
+
     # the plot, outputs the pairwise distance matrix to a csv file as well.
 
 graph_compartments = model.compartmentPlot(
@@ -91,3 +94,6 @@ graph_compartments = model.compartmentPlot(
     # infections in the composition plot can exceed the number of infected hosts
     # in the compartment plot. This happens because a single host infected by
     # multiple genotypes is counted twice in the former, but not the latter.
+
+
+# todo por que bajan los infectados si no hay recovery?
