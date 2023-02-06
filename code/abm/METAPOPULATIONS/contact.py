@@ -5,6 +5,10 @@ metapopulation model setup with multiple populations connected to each other by
 "population contact" events between vectors and hosts, in which a vector and a
 host from different populations contact each other without migrating from one
 population to another.
+
+#todo COMO ASI??
+
+
 Population A is connected to Population B and to Clustered Population 4 (both
 are one-way connections).
 Clustered Populations 0-4 are all connected to each other in two-way
@@ -50,6 +54,8 @@ model.linkPopulationsVectorHostContact('clustered_population_4','population_A',2
     # clustered_population_4 vectors. Note that for population contacts, both
     # populations need to have contact rates towards each other (migration does
     # not require this)
+
+    #todo igual no entiendo lo de contact sin migration
 model.linkPopulationsHostVectorContact('population_A','population_B',2e-2)
 model.linkPopulationsVectorHostContact('population_B','population_A',2e-2)
     # We link population_A to population_B with a one-way

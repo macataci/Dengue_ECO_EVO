@@ -13,6 +13,7 @@ Two different pathogen genotypes are initially seeded into Populations A and B.
 
 from opqua.model import Model
 
+
 model = Model()
 model.newSetup('setup_normal', preset='vector-borne')
 model.newSetup(
@@ -38,9 +39,13 @@ model.createInterconnectedPopulations(
     # rate of 2e-3 between each of them in both directions. Each population has
     # an numbered ID with the prefix "clustered_population_", has the parameters
     # defined in the "setup_cluster" setup, and has 20 hosts and vectors.
+
 model.linkPopulationsHostMigration('population_A','clustered_population_4',2e-3)
+
+    #todo asumo que Population A se puede ver a clustered pero no al otro lado
     # We link population_A to one of the clustered populations with a one-way
     # migration rate of 2e-3.
+
 model.linkPopulationsHostMigration('population_A','population_B',2e-3)
     # We link population_A to population_B with a one-way migration rate of
     # 2e-3.

@@ -13,6 +13,9 @@ my_model = Model() # Make a new model object.
 my_model.newSetup('my_setup', preset='vector-borne',
     mortality_rate_host=1e-2,
         # change the default host mortality rate to 10% of recovery rate
+
+                  #todo esta es por infection?
+
     protection_upon_recovery_host=[0,10],
         # make hosts immune to the genome that infected them if they recover
         # [0,10] means that pathogen genome positions 0 through 9 will be saved
@@ -32,6 +35,7 @@ my_model.newPopulation(
     )
     # Create a new population of 100 hosts and 100 vectors called
     # "my_population". The population uses parameters stored in "my_setup".
+
 my_model.addPathogensToHosts( 'my_population',{'AAAAAAAAAA':20} )
     # Add pathogens with a genome of "AAAAAAAAAA" to 20 random hosts in
     # population "my_population".
