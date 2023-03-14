@@ -75,6 +75,12 @@ graph_composition = model.compositionPlot(
         # Create a plot to track pathogen genotypes across time.
     '../../../figs/EVOLUTION/transmissibility_function_reassortment_example_composition.png', data
     )
+model.newIntervention(
+    20, 'addPathogensToHosts',
+    [ 'my_population', {'TTTTTTTTTT':5, 'CCCCCCCCCC':5, } ]
+    )
+    # At time 20, adds pathogens of genomes TTTTTTTTTT and CCCCCCCCCC to 5
+    # random hosts each.
 
 
 graph_clustermap = model.clustermap(
