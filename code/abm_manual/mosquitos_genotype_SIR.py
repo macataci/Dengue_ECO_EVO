@@ -5,6 +5,7 @@ import numpy as np
 from IPython.display import display
 import inspect
 
+#Version con genotipos y sin muerte
 
 # Infeccion de mosquito:
 # - Mosquito suceptible pica a humano infectado.
@@ -122,6 +123,9 @@ class SIRmodel:
                 # Para cada mosquito va a tener una probabilidad de encuentro, si esta es mayor a cierto valor el encuentro se da.
                 # Revisar si hacer mejor por grid
                 # No voy a revisar a todos pues porque me importan son los infectados
+                
+                #TODO self.encounter_p que varíe en el tiempo.
+                
                 for mosquito in self.population_mos:
                     if mosquito.state == "I" and random.random() > self.encounter_p:
                     # Si el encuentro se da, se tiene otra siguiente p a superar, que está relacionada con el biting rate.
@@ -190,7 +194,7 @@ class SIRmodel:
 
 # (n_humans, n_mosquitoes, init_inf_hum, init_inf_mos, encounter_p,  biting_p, daysCured)
 
-model = SIRmodel(100, 1000, 1, 1, 0.9, 0.9, 20, 0.2)
+model = SIRmodel(100, 1000, 1, 1, 0.9, 0.9, 14, 0.2)
 # Run simulation
 df_data, df_conteos, df_genotypes = model.run(100)
 

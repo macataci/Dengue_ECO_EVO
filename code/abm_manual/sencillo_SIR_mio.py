@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 from IPython.display import display
 
+#Version hiper sencilla, sin mosquitos y sin contactos entre humanos.
         
 class Human:
     def __init__(self, id, state): 
