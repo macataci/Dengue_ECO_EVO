@@ -5,7 +5,6 @@ import numpy as np
 from IPython.display import display
 import inspect
 
-
 # Version con mosquitos pero sin genotipos y sin muerte. 
 # AUN NO METO GENOTIPOS
 

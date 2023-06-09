@@ -7,8 +7,8 @@ import inspect
 from statistics import mean 
 import time
 
-# Puse logistico en una función nueva.
-# Voy a matar a los mosquitos si pasan una p.
+# Lo mismo de V2 pero ahora quiero que los mosquitos no sean agentes sino cajas.
+# Ahora el genoma que tiene cada humano es el que más se repite.
 
 
 # Voy a asumir que mosquitos bebés de I o S, ancen infectados. O sea no hay transmisión vertical.
@@ -23,12 +23,7 @@ import time
 
 
 opt = ["A", "C", "T", "G"]        
-class Mosquito:
-    def __init__(self, id, state, genotype): 
-        self.id = id
-        self.state = state
-        self.genotype = genotype
-        
+
 class Human:
     def __init__(self, id, state, genotype): 
         self.id = id
@@ -51,28 +46,14 @@ class SIRmodel:
         self.K = K
         self.r = r
         self.population_hum = []
-        self.population_mos = []
+        self.population_mos_S = self.n_mosquitoes-self.init_inf_mos
+        self.population_mos_I = self.init_inf_mos
         self.data = pd.DataFrame(columns=["Time_step", "Id", "State", "Genotype"])
         self.counts = pd.DataFrame(columns=["S", "I", "R"])
         self.genotypes = pd.DataFrame(columns=["A", "C", "T", "G"])
         self.initialize_pop_hum()
-        self.initialize_pop_mos()
 
-    def initialize_pop_mos(self):
 
-        for i in range(self.n_mosquitoes):
-            state = "S"
-            mosquito = Mosquito(i, state, "")
-            self.population_mos.append(mosquito)
-        
-        sample_infected = random.sample(self.population_mos, self.init_inf_mos)
-        
-        for mosquito in sample_infected:
-            index = self.population_mos.index(mosquito)
-            self.population_mos[index].state = "I"
-            self.population_mos[index].genotype = random.choice(opt)
-            
-            
     def initialize_pop_hum(self):
 
         for i in range(self.n_humans):
@@ -100,24 +81,12 @@ class SIRmodel:
         
         for human in self.population_hum:  
             if human.state == "I": 
-                for mosquito in self.population_mos:    
+                for mosquito in range(self.population_mos_S):    
+                    if random.random() > self.encounter_p:                    
+                        if random.random() > self.biting_p:
+                            self.population_mos_I+=1
+                            self.population_mos_S-=1
                                 
-                # Human recovery and mosquito infection
-                
-                # MOSQUITO INFECTION
-                
-                    if mosquito.state == "S":                        
-                        #TODO dejo multi, transmission o que aca
-                        if random.random() > self.encounter_p:                    
-                            # Si el encuentro se da, se tiene otra siguiente p a superar, que está relacionada con el biting rate.
-                            if random.random() > self.biting_p:
-                                mosquito.state ="I"
-                                mosquito.genotype = human.genotype
-                                
-                    
-                        #HUMAN RECOVERY
-                        
-                #Lo puse como "si dura más de 14 dáías enfermo, se recupera", y paila.
                 if random.random () > self.gamma:
                     human.state = "R"
                 
@@ -126,24 +95,17 @@ class SIRmodel:
                                     
         # Human infection   
             elif human.state == "S":
-                for mosquito in self.population_mos:  
-                    # Para cada mosquito va a tener una probabilidad de encuentro, si esta es mayor a cierto valor el encuentro se da.
-                    # Revisar si hacer mejor por grid
-                    # No voy a revisar a todos pues porque me importan son los infectados
-                    
-                    #TODO self.encounter_p que varíe en el tiempo.
-                    
-                    if mosquito.state == "I" and random.random() > self.encounter_p:
-                    # Si el encuentro se da, se tiene otra siguiente p a superar, que está relacionada con el biting rate.
+                for mosquito in range(self.population_mos_I):
+                    if random.random() > self.encounter_p:
                         if random.random() > self.biting_p:
                             human.state ="I"
-                            human.genotype = mosquito.genotype
+                            human.genotype = self.data["Genotype"].value_counts().idxmax()
                             # Si se infecta pues se asume que nadie más lo pica
                             break
-        pop_mos_copy = self.population_mos.copy()
-        for mosquito in pop_mos_copy:
-            if mosquito.state == "I" and random.random() > 1/self.mosq_t_inf:
-                self.population_mos.pop(self.population_mos.index(mosquito))
+                    
+        for mosquito in range(self.population_mos_I):
+            if random.random() > 1/self.mosq_t_inf:
+                self.population_mos_I-=1
                     
     # Puede modificarlo teniendo transmisión vertical.
     # Revisar bien esto porque sería mejor tener en cuenta a cada mosquito
@@ -151,13 +113,9 @@ class SIRmodel:
     def vital_dynamics(self):
                         
         # dN/dt = rN*(1-(N/k))
-        N = len(self.population_mos)
+        N = self.population_mos_I + self.population_mos_S
         mosq = round((self.r*N)*(1-(N/self.K)))
-        for i in range(mosq):
-            id = N + i
-            nuevo = Mosquito(id, "S", "")
-            self.population_mos.append(nuevo)
-                
+        self.population_mos_S+=mosq  
                            
     def update(self, t):
         self.change_state()
@@ -220,12 +178,9 @@ sims = 2
 dias = 60
 estados = 3
 #x,y,z = simulaciones, tiempos, estado
-
-#PARA 30, 60 -> 4 mins
-
 matriz = np.zeros((sims, dias, estados))
 for i in range(sims):
-    model = SIRmodel(100, 1000, 1, 200, 0.96, 0.96, 14, 0.2, 1500, 1/10, 4)
+    model = SIRmodel(100, 1000, 1, 200, 0.95, 0.95, 14, 0.2, 1500, 1/10, 4)
     df_data, df_conteos, df_genotypes = model.run(dias)
     S = df_conteos["S"].tolist()
     I = df_conteos["I"].tolist()
