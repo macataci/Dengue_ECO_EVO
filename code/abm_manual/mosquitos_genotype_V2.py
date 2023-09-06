@@ -216,8 +216,8 @@ class SIRmodel:
 
 start_time = time.time()
 # (self, n_humans, n_mosquitoes, init_inf_hum, init_inf_mos, encounter_p,  biting_p, daysCured, mutation_p, K, r)
-sims = 2
-dias = 60
+sims = 30
+dias = 100
 estados = 3
 #x,y,z = simulaciones, tiempos, estado
 

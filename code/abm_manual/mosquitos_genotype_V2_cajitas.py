@@ -8,10 +8,10 @@ from statistics import mean
 import time
 
 # Lo mismo de V2 pero ahora quiero que los mosquitos no sean agentes sino cajas.
-# Ahora el genoma que tiene cada humano es el que más se repite.
+# Ahora el genoma que tiene cada humano es el que más se repite (pero  solo tiene una letra como genoma).
 
 
-# Voy a asumir que mosquitos bebés de I o S, ancen infectados. O sea no hay transmisión vertical.
+# Voy a asumir que mosquitos bebés de I o S, nacen infectados. O sea no hay transmisión vertical.
 # TODO revisar esto a futuro
 # Infeccion de mosquito:
 # - Mosquito suceptible pica a humano infectado.
@@ -174,13 +174,13 @@ class SIRmodel:
 
 start_time = time.time()
 # (self, n_humans, n_mosquitoes, init_inf_hum, init_inf_mos, encounter_p,  biting_p, daysCured, mutation_p, K, r)
-sims = 2
+sims = 10
 dias = 60
 estados = 3
 #x,y,z = simulaciones, tiempos, estado
 matriz = np.zeros((sims, dias, estados))
 for i in range(sims):
-    model = SIRmodel(100, 1000, 1, 200, 0.95, 0.95, 14, 0.2, 1500, 1/10, 4)
+    model = SIRmodel(100, 100, 5, 10, 0.95, 0.95, 14, 0.2, 1500, 1/10, 4)
     df_data, df_conteos, df_genotypes = model.run(dias)
     S = df_conteos["S"].tolist()
     I = df_conteos["I"].tolist()
