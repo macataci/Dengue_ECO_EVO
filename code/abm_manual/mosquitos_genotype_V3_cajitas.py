@@ -3,9 +3,9 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 from IPython.display import display
-import inspect
 from statistics import mean 
 import time
+from collections import Counter
 
 """
 En este script se presentarán las siguientes características:
@@ -18,11 +18,10 @@ En este script se presentarán las siguientes características:
 - También en caso de recuperación, ese genoma sale del pool, y se recuperan con una probabilidad uniforme. 
 """
 
-
 #TODO revisar dinámicas vitales de humanos y mosquitos
-#TODO mirar si crear una clase de tipo genotype o como creo ese pool
-opt = ["A", "C", "T", "G"]      
-
+#TODO mirar si crear una clase de tipo genotype 
+#TODO definir escalas de tiempo
+ 
 class Human:
     def __init__(self, id, state, genotype): 
         self.id = id
@@ -30,7 +29,7 @@ class Human:
         self.genotype = genotype
                
 class SIRmodel:
-    def __init__(self, n_humans, n_mosquitoes, init_inf_hum, init_inf_mos, encounter_p,  biting_p, hum_t_inf, mutation_p, K, r, mosq_t_inf):
+    def __init__(self, n_humans, n_mosquitoes, init_inf_hum, init_inf_mos, encounter_p,  biting_p, hum_t_inf, mutation_p, K, r, mosq_t_inf, amount, length, mutation_region):
         
         """
             Args:
@@ -60,11 +59,20 @@ class SIRmodel:
         self.population_hum = []
         self.population_mos_S = self.n_mosquitoes-self.init_inf_mos
         self.population_mos_I = self.init_inf_mos
+        
+        # related to the genotype pool
+        
+        self.amount = amount
+        self.length = length
+        self.mutation_region = mutation_region
+        self.genotype_counts = []
+        self.dic_inititalpool = self.initial_pool()
+        
+        #related to humans
+        
         self.data = pd.DataFrame(columns=["Time_step", "Id", "State", "Genotype"])
         self.counts = pd.DataFrame(columns=["S", "I", "R"])
-        # TODO convertir esto en un diccionario donde las llaves sean los genotipos y los valores el número de veces
-        # que estan
-        self.genotypes = pd.DataFrame(columns=["A", "C", "T", "G"])
+        
         self.initialize_pop_hum()
 
     def initialize_pop_hum(self):
@@ -80,37 +88,57 @@ class SIRmodel:
         sample_infected = random.sample(self.population_hum, self.init_inf_hum)
         """ 
         For each human picked above, gets its index in the list population_hum, and then updates the state of this human
-        in the list, from S to I
+        in the list, from S to I and assigns the secuence based on the frequencies of the initial pool, since these
+        are the initial infected people
         """
-        #TODO aqui ya no se infectan con un genotype the random choice sino del pool.
-        
         for human in sample_infected:
             index = self.population_hum.index(human)
             self.population_hum[index].state = "I"
-            self.population_hum[index].genotype = random.choice(opt)
+            self.population_hum[index].genotype = self.picking_from_pool(self.dic_inititalpool)
         """
         After updating the list population_hum with its corresponding states updates the dataframe data
         filling the ts as 0 for all humans and filling all other info (id, state, genotype) correspondingly.  
         """  
         for i in range(len(self.population_hum)):
             self.data.loc[i]=(0, self.population_hum[i].id, self.population_hum[i].state, self.population_hum[i].genotype)
-        
-        # TODO REVISAR Creates conteos y genotype_counting with 0    
         """
-        Runs the function conteos for the initial time step (0), as well as the function genotype_counting.
+        Runs the function conteos for the initial time step (0)
         """
-        self.conteos(0)
+        self.conteos_SIR(0)
         self.genotype_counting(0)
-        
+    
+    def generate_random_string(self, length):
+        letters = ["A", "C", "T", "G"]
+        # Randomly choose characters from letters for the given length of the string
+        random_string = ''.join(random.choice(letters) for i in range(length))
+        return random_string 
+      
+    def initial_pool(self):
+        pool = []
+        for i in range (self.amount):
+            sequence = self.generate_random_string(self.length)
+            pool.append(sequence)
+        conteo_t0 = Counter(pool)
+        return conteo_t0
+    
+    def picking_from_pool (self, dic):
+        keys = dic.keys()
+        values = dic.values()
+        if max(values)==1:
+            sequence = random.choice(list(keys))
+        else:
+            sequence_int = list({i for i in dic if dic[i]==max(values)})
+            if len(sequence_int) == 1:
+                sequence = sequence_int[0]
+            else:
+                sequence = random.choice(sequence_int)
+        return sequence
     def change_state(self):   
         """
         Updates the state of humans if necessary. 
         """
-
-        
         
         """
-        
         **Mosquito infection, human recovery and genotype mutation.**
         
         For each human in the list population_hum checks if is infected. 
@@ -151,23 +179,23 @@ class SIRmodel:
                                
                 if random.random () > self.gamma:
                     human.state = "R"
+                    human.genotype = ""
                 
                 #TODO revisar esto, porque si sí muta, tiene que actualizarse el diccionario de los conteos de genotipos
                 # o el data frame y quitar ese viejo. Además toca mirar como hacer que eso mute y que no mute un resto 
-                #porque o sino al distancia genetica se jode.
+                #porque o sino LA distancia genetica se jode.
                 
-                elif random.random () > self.mutation_p:
-                    human.genotype = random.choice(opt)
+               # elif random.random () > self.mutation_p:
+                #    human.genotype = random.choice(opt)
                                     
             elif human.state == "S":
                 for mosquito in range(self.population_mos_I):
                     if random.random() > self.encounter_p:
                         if random.random() > self.biting_p:
                             human.state ="I"
-            
-                            #TODO actualizar esto para que pues siga siendo el most frequent pero también mejor que lo saque de un diccionario o algo
-                            # asi.
-                            human.genotype = self.data["Genotype"].value_counts().idxmax()
+                            index_dic_anterior = len(self.genotype_counts)-1
+                            max_tant = self.picking_from_pool(self.genotype_counts[index_dic_anterior])
+                            human.genotype = max_tant
                             # Si se infecta pues se asume que nadie más lo pica
                             break
                     
@@ -197,7 +225,7 @@ class SIRmodel:
             self.data.loc[len(self.data)] = (t,  human.id, human.state, human.genotype)   
         self.vital_dynamics()
     
-    def conteos(self, t):
+    def conteos_SIR(self, t):
         """
         In each time step counts the number of humans in each of the states and updates
         the data frame counts. 
@@ -222,26 +250,10 @@ class SIRmodel:
     #TODO falta mirar si dejar este conteo asi o en un diccionario o como
     
     def genotype_counting (self, t):
-        conteo = self.data.where(self.data["Time_step"]==t)["Genotype"].value_counts()
-        genotype = conteo.index.tolist()
-        if 'A' in genotype:
-            A = conteo['A']
-        else: 
-            A=0
-        if 'C' in genotype:
-            C = conteo['C']
-        else: 
-            C=0
-        if 'T' in genotype:
-            T = conteo['T']
-        else: 
-            T=0
-        if 'G' in genotype:
-            G = conteo['G']
-        else: 
-            G=0  
-            
-        self.genotypes.loc[t] = (A, C, T, G )   
+        
+        genotypes_list = list(self.data.loc[(self.data["Time_step"]==t) & (self.data["State"]=="I")]["Genotype"])
+        conteo_dict = Counter(genotypes_list)
+        self.genotype_counts.append(conteo_dict)
         
     def run(self, n_steps):
         """
@@ -253,36 +265,40 @@ class SIRmodel:
         #mosquitos = [len(self.population_mos)]
         for t in range(1, n_steps):
             self.update(t)
-            self.conteos(t)
+            self.conteos_SIR(t)
             self.genotype_counting(t)
            # mosquitos.append(len(self.population_mos))
-        return self.data, self.counts, self.genotypes
+        return self.data, self.counts, self.genotype_counts
+
 
 #Esto es pa ver cuanto se demora el código.
 
 start_time = time.time()
-# (self, n_humans, n_mosquitoes, init_inf_hum, init_inf_mos, encounter_p,  biting_p, daysCured, mutation_p, K, r)
+# (n_humans, n_mosquitoes, init_inf_hum, init_inf_mos, encounter_p,  biting_p, hum_t_inf, mutation_p, K, r, mosq_t_inf, amount, length, mutation_region):
+#model = SIRmodel(100, 600, 5, 10, 0.9, 0.9, 2, 0.2, 1500, 1/10, 4, 10, 6, 3)
+#df_data, df_conteos, list_dic_genotypes = model.run(10)
 sims = 10
-dias = 60
+dias = 10
 estados = 3
 #x,y,z = simulaciones, tiempos, estado
 matriz = np.zeros((sims, dias, estados))
 for i in range(sims):
-    model = SIRmodel(100, 100, 5, 10, 0.95, 0.95, 14, 0.2, 1500, 1/10, 4)
-    df_data, df_conteos, df_genotypes = model.run(dias)
+    model = SIRmodel(100, 600, 5, 10, 0.9, 0.9, 2, 0.2, 1500, 1/10, 4, 10, 6, 3)
+    df_data, df_conteos, list_dic_genotypes = model.run(dias)
     S = df_conteos["S"].tolist()
     I = df_conteos["I"].tolist()
     R = df_conteos["R"].tolist()
     matriz[i, :, 0] = S
     matriz[i, :, 1] = I
     matriz[i, :, 2] = R
-
+print("Aqui está")
+print(list_dic_genotypes)
+print("Aqui acaba")
 # Plot results
 mediaS_total = []
 mediaI_total = []
 mediaR_total = []
 quantiles = [50, 95]
-
 
 # Aca viene toda esa vaina de los intervalos de confianza
 
@@ -329,10 +345,25 @@ axis[0].set_ylabel('Number of Humans')
 axis[0].set_title('Humans dynamics')
 axis[0].legend()
 
-axis[1].plot(times, df_genotypes["A"].tolist(), label='A')
-axis[1].plot(times, df_genotypes["C"].tolist(), label='C')
-axis[1].plot(times, df_genotypes["T"].tolist(), label='T')
-axis[1].plot(times, df_genotypes["G"].tolist(), label='G')
+union = []
+for i in range(len(list_dic_genotypes)):
+    union += list(list_dic_genotypes[i].keys())
+union = np.unique(union)
+df_genotypes = pd.DataFrame(columns=["Genotype", "Time", "Count"])
+for i in range(len(union)):
+    for j in range(len(list_dic_genotypes)):
+        if list_dic_genotypes[j].get(union[i]) is None:
+            numero = 0
+        else: 
+            numero = list_dic_genotypes[j].get(union[i])
+        df_genotypes.loc[len(df_genotypes)] = (union[i], j, numero) 
+        
+    axis[1].plot(times, list(df_genotypes.loc[df_genotypes["Genotype"]==union[i]]["Count"]), label=union[i])
+ 
+#axis[1].plot(times, df_genotypes["A"].tolist(), label='A')
+#axis[1].plot(times, df_genotypes["C"].tolist(), label='C')
+#axis[1].plot(times, df_genotypes["T"].tolist(), label='T')
+#axis[1].plot(times, df_genotypes["G"].tolist(), label='G')
 #axis[1].fill_between(time, df_genotypes["A"].tolist())
 #axis[1].fill_between(time,df_genotypes["C"].tolist())
 #axis[1].fill_between(time, df_genotypes["T"].tolist())
