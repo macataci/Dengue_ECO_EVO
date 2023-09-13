@@ -293,12 +293,12 @@ start_time = time.time()
 #model = SIRmodel(100, 600, 5, 10, 0.9, 0.9, 2, 0.2, 1500, 1/10, 4, 10, 6, 3)
 #df_data, df_conteos, list_dic_genotypes = model.run(10)
 sims = 15
-dias = 15
+dias = 8
 estados = 3
 #x,y,z = simulaciones, tiempos, estado
 matriz = np.zeros((sims, dias, estados))
 for i in range(sims):
-    model = SIRmodel(100, 600, 10, 10, 0.9, 0.9, 2, 0.2, 1500, 1/10, 4, 20, 15, 3, 10)
+    model = SIRmodel(200, 700, 20, 10, 0.9, 0.9, 2, 0.0002, 1500, 1/10, 4, 30, 25, 3, 12)
     df_data, df_conteos, list_dic_genotypes = model.run(dias)
     S = df_conteos["S"].tolist()
     I = df_conteos["I"].tolist()
@@ -364,27 +364,20 @@ union = []
 for i in range(len(list_dic_genotypes)):
     union += list(list_dic_genotypes[i].keys())
 union = np.unique(union)
-df_genotypes = pd.DataFrame(columns=["Genotype", "Time", "Count"])
+df_genotypes = pd.DataFrame(columns=["Genotype", "Time", "Count", "Freq"])
 for i in range(len(union)):
     for j in range(len(list_dic_genotypes)):
         if list_dic_genotypes[j].get(union[i]) is None:
             numero = 0
         else: 
             numero = list_dic_genotypes[j].get(union[i])
-        df_genotypes.loc[len(df_genotypes)] = (union[i], j, numero) 
+        total = sum(list_dic_genotypes[j].values())
+        freq = numero/total
+        df_genotypes.loc[len(df_genotypes)] = (union[i], j, numero, freq) 
         
-    axis[1].plot(times, list(df_genotypes.loc[df_genotypes["Genotype"]==union[i]]["Count"]), label=union[i])
- 
-#axis[1].plot(times, df_genotypes["A"].tolist(), label='A')
-#axis[1].plot(times, df_genotypes["C"].tolist(), label='C')
-#axis[1].plot(times, df_genotypes["T"].tolist(), label='T')
-#axis[1].plot(times, df_genotypes["G"].tolist(), label='G')
-#axis[1].fill_between(time, df_genotypes["A"].tolist())
-#axis[1].fill_between(time,df_genotypes["C"].tolist())
-#axis[1].fill_between(time, df_genotypes["T"].tolist())
-#axis[1].fill_between(time, df_genotypes["G"].tolist())
+    axis[1].plot(times, list(df_genotypes.loc[df_genotypes["Genotype"]==union[i]]["Freq"]))#label=union[i]
 axis[1].set_xlabel('Time Step')
-axis[1].set_ylabel('Genotype')
+axis[1].set_ylabel('Genotype frequence')
 axis[1].set_title('Genotype dynamics')
 axis[1].legend()
 
