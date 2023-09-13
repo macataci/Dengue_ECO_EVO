@@ -29,7 +29,7 @@ class Human:
         self.genotype = genotype
                
 class SIRmodel:
-    def __init__(self, n_humans, n_mosquitoes, init_inf_hum, init_inf_mos, encounter_p,  biting_p, hum_t_inf, mutation_p, K, r, mosq_t_inf, amount, length, mutation_region):
+    def __init__(self, n_humans, n_mosquitoes, init_inf_hum, init_inf_mos, encounter_p,  biting_p, hum_t_inf, mutation_p, K, r, mosq_t_inf, amount, length, i_mut_region, f_mut_region):
         
         """
             Args:
@@ -43,7 +43,11 @@ class SIRmodel:
                 mutation_p  (float): mutation rate of the genome
                 K             (int): carrying capacity mosquitoes
                 r           (float): constant of proportionality
-                mosq_t_inf  (float): days that a mosquito is infected   
+                mosq_t_inf  (float): days that a mosquito is infected
+                amount        (int): number of sequences in the initial pool
+                length        (int): length of the genome
+                i_mut_region  (int): starting position of the mutation region
+                f_mut_region  (int): ending position of the mutation region
             """
         self.n_humans = n_humans
         self.n_mosquitoes = n_mosquitoes
@@ -64,10 +68,11 @@ class SIRmodel:
         
         self.amount = amount
         self.length = length
-        self.mutation_region = mutation_region
+        self.i_mut_reg = i_mut_region
+        self.f_mut_reg = f_mut_region
         self.genotype_counts = []
         self.dic_inititalpool = self.initial_pool()
-        
+        #self.letters = ["A", "C", "T", "G"]
         #related to humans
         
         self.data = pd.DataFrame(columns=["Time_step", "Id", "State", "Genotype"])
@@ -121,6 +126,18 @@ class SIRmodel:
         conteo_t0 = Counter(pool)
         return conteo_t0
     
+    def mutation(self, sequence, start, end):
+        letters = ["A", "C", "T", "G"]
+        input_seq = list(sequence)
+        copy = input_seq.copy()
+        choice = random.randint(start, end)
+        letter = random.choice(letters)
+        while input_seq[choice] == letter:
+            letter = random.choice(letters)        
+        copy[choice] = letter
+        output_seq = ''.join([elem for elem in copy])
+        return output_seq
+        
     def picking_from_pool (self, dic):
         keys = dic.keys()
         values = dic.values()
@@ -133,6 +150,7 @@ class SIRmodel:
             else:
                 sequence = random.choice(sequence_int)
         return sequence
+    
     def change_state(self):   
         """
         Updates the state of humans if necessary. 
@@ -181,12 +199,9 @@ class SIRmodel:
                     human.state = "R"
                     human.genotype = ""
                 
-                #TODO revisar esto, porque si sí muta, tiene que actualizarse el diccionario de los conteos de genotipos
-                # o el data frame y quitar ese viejo. Además toca mirar como hacer que eso mute y que no mute un resto 
-                #porque o sino LA distancia genetica se jode.
-                
-               # elif random.random () > self.mutation_p:
-                #    human.genotype = random.choice(opt)
+                elif random.random () > self.mutation_p:
+                    new_seq = self.mutation(human.genotype, self.i_mut_reg, self.f_mut_reg)
+                    human.genotype = new_seq
                                     
             elif human.state == "S":
                 for mosquito in range(self.population_mos_I):
@@ -274,16 +289,16 @@ class SIRmodel:
 #Esto es pa ver cuanto se demora el código.
 
 start_time = time.time()
-# (n_humans, n_mosquitoes, init_inf_hum, init_inf_mos, encounter_p,  biting_p, hum_t_inf, mutation_p, K, r, mosq_t_inf, amount, length, mutation_region):
+# (n_humans, n_mosquitoes, init_inf_hum, init_inf_mos, encounter_p,  biting_p, hum_t_inf, mutation_p, K, r, mosq_t_inf, amount, length, i_mut_reg, f_mut_reg):
 #model = SIRmodel(100, 600, 5, 10, 0.9, 0.9, 2, 0.2, 1500, 1/10, 4, 10, 6, 3)
 #df_data, df_conteos, list_dic_genotypes = model.run(10)
-sims = 10
-dias = 10
+sims = 15
+dias = 15
 estados = 3
 #x,y,z = simulaciones, tiempos, estado
 matriz = np.zeros((sims, dias, estados))
 for i in range(sims):
-    model = SIRmodel(100, 600, 5, 10, 0.9, 0.9, 2, 0.2, 1500, 1/10, 4, 10, 6, 3)
+    model = SIRmodel(100, 600, 10, 10, 0.9, 0.9, 2, 0.2, 1500, 1/10, 4, 20, 15, 3, 10)
     df_data, df_conteos, list_dic_genotypes = model.run(dias)
     S = df_conteos["S"].tolist()
     I = df_conteos["I"].tolist()
