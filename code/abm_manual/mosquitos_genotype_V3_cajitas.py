@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 from IPython.display import display
+from Bio import Align
 from statistics import mean 
 import time
 from collections import Counter
@@ -29,7 +30,7 @@ class Human:
         self.genotype = genotype
                
 class SIRmodel:
-    def __init__(self, n_humans, n_mosquitoes, init_inf_hum, init_inf_mos, encounter_p,  biting_p, hum_t_inf, mutation_p, K, r, mosq_t_inf, amount, length, i_mut_region, f_mut_region):
+    def __init__(self, n_humans, n_mosquitoes, init_inf_hum, init_inf_mos, encounter_p,  biting_p, hum_t_inf, mutation_p, K, r, mosq_t_inf, amount, length, i_mut_region, f_mut_region, threshold):
         
         """
             Args:
@@ -48,6 +49,7 @@ class SIRmodel:
                 length        (int): length of the genome
                 i_mut_region  (int): starting position of the mutation region
                 f_mut_region  (int): ending position of the mutation region
+                threshold   (float): threshold that defines similarity
             """
         self.n_humans = n_humans
         self.n_mosquitoes = n_mosquitoes
@@ -68,6 +70,7 @@ class SIRmodel:
         
         self.amount = amount
         self.length = length
+        self.threshold = threshold
         self.i_mut_reg = i_mut_region
         self.f_mut_reg = f_mut_region
         self.genotype_counts = []
@@ -111,6 +114,12 @@ class SIRmodel:
         """
         self.conteos_SIR(0)
         self.genotype_counting(0)
+        
+    def calculate_similarity (self, seq1, seq2):
+        aligner = Align.PairwiseAligner(match_score=1.0)
+        scoref = aligner.score(seq1, seq2)
+        proportion = scoref/self.length
+        return proportion
     
     def generate_random_string(self, length):
         letters = ["A", "C", "T", "G"]
@@ -119,9 +128,16 @@ class SIRmodel:
         return random_string 
       
     def initial_pool(self):
-        pool = []
-        for i in range (self.amount):
+        # TODO solo se compara con la base, faltaría que se compararan entre todas pero ahi tiempo
+        # computacional crece
+        base = self.generate_random_string(self.length)
+        pool = [base]
+        for i in range (self.amount-1):
             sequence = self.generate_random_string(self.length)
+            similarity = self.calculate_similarity(base, sequence)
+            while similarity < self.threshold:
+                sequence = self.generate_random_string(self.length)
+                similarity = self.calculate_similarity(base, sequence)
             pool.append(sequence)
         conteo_t0 = Counter(pool)
         return conteo_t0
@@ -200,7 +216,16 @@ class SIRmodel:
                     human.genotype = ""
                 
                 elif random.random () > self.mutation_p:
+                    # TODO aqui va a comparar con cualquiera, falta que compare con todas, o que compare con la más
+                    # repetida, y ahí uso la funcion de picking from the pool
                     new_seq = self.mutation(human.genotype, self.i_mut_reg, self.f_mut_reg)
+                    #index_dic_anterior = len(self.genotype_counts)-1
+                    #dic_anterior = self.genotype_counts[index_dic_anterior]
+                    #seq_base = random.choice(list(dic_anterior.keys()))
+                    #similarity = self.calculate_similarity(seq_base, new_seq)
+                    #while similarity < self.threshold:
+                     #   new_seq = self.mutation(human.genotype, self.i_mut_reg, self.f_mut_reg)
+                      #  similarity = self.calculate_similarity(seq_base, new_seq)
                     human.genotype = new_seq
                                     
             elif human.state == "S":
@@ -289,16 +314,16 @@ class SIRmodel:
 #Esto es pa ver cuanto se demora el código.
 
 start_time = time.time()
-# (n_humans, n_mosquitoes, init_inf_hum, init_inf_mos, encounter_p,  biting_p, hum_t_inf, mutation_p, K, r, mosq_t_inf, amount, length, i_mut_reg, f_mut_reg):
+# (n_humans, n_mosquitoes, init_inf_hum, init_inf_mos, encounter_p,  biting_p, hum_t_inf, mutation_p, K, r, mosq_t_inf, amount, length, i_mut_reg, f_mut_reg, threshold):
 #model = SIRmodel(100, 600, 5, 10, 0.9, 0.9, 2, 0.2, 1500, 1/10, 4, 10, 6, 3)
 #df_data, df_conteos, list_dic_genotypes = model.run(10)
 sims = 15
-dias = 8
+dias = 15
 estados = 3
 #x,y,z = simulaciones, tiempos, estado
 matriz = np.zeros((sims, dias, estados))
 for i in range(sims):
-    model = SIRmodel(200, 700, 20, 10, 0.9, 0.9, 2, 0.0002, 1500, 1/10, 4, 30, 25, 3, 12)
+    model = SIRmodel(300, 500, 40, 10, 0.95, 0.95, 2, 0.2, 1500, 1/10, 4, 30, 15, 2, 8, 0.6)
     df_data, df_conteos, list_dic_genotypes = model.run(dias)
     S = df_conteos["S"].tolist()
     I = df_conteos["I"].tolist()
@@ -386,7 +411,11 @@ plt.show()
 print("--- %s seconds ---" % (time.time() - start_time))
 
 
-
+"""
+Notas:
+Si cuando muta lo pongo a comparar, y la region es muy pequeña, y solo tengo 1 SNP por mutacion por ts, puede que se quede en un loop 
+infinito porque nunca pase el umbral, incluso teniendo como region de mutacion toda la sequencia.
+"""
 
 
 
