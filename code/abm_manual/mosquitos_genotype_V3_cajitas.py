@@ -16,6 +16,7 @@ En este script se presentarán las siguientes características:
 - El genoma asignado a los humanos saldrá de un pool creado inicialmente. Este pool corresponde a genotipos de un mismo serotipo, por lo que 
     sus distancias genéticas son pequeñas. El genoma asignado será el de mayor frecuencia.
 - Se tendrá mutación (pero pequeñita) y cuando esto suceda, esta nueva secuencia se añadirá al pool y se quitará la que se tenía antes de la mutación.
+- La mutación no se da en una única posición, sino que pueden mutar un número aleatorio de posiciones. 
 - También en caso de recuperación, ese genoma sale del pool, y se recuperan con una probabilidad uniforme. 
 """
 
@@ -146,11 +147,15 @@ class SIRmodel:
         letters = ["A", "C", "T", "G"]
         input_seq = list(sequence)
         copy = input_seq.copy()
-        choice = random.randint(start, end)
-        letter = random.choice(letters)
-        while input_seq[choice] == letter:
-            letter = random.choice(letters)        
-        copy[choice] = letter
+        posiciones = list(range(start,end+1))
+        opciones = list(range(1,len(posiciones)+1))
+        cuantos = random.choice(opciones)
+        escogidos = random.sample(posiciones, cuantos)
+        for i in escogidos:
+            letter = random.choice(letters)
+            while input_seq[i] == letter:
+                letter = random.choice(letters)
+            copy[i] = letter
         output_seq = ''.join([elem for elem in copy])
         return output_seq
         
@@ -400,7 +405,7 @@ for i in range(len(union)):
         freq = numero/total
         df_genotypes.loc[len(df_genotypes)] = (union[i], j, numero, freq) 
         
-    axis[1].plot(times, list(df_genotypes.loc[df_genotypes["Genotype"]==union[i]]["Freq"]))#label=union[i]
+    axis[1].plot(times, list(df_genotypes.loc[df_genotypes["Genotype"]==union[i]]["Freq"]), label=union[i])#label=union[i]
 axis[1].set_xlabel('Time Step')
 axis[1].set_ylabel('Genotype frequence')
 axis[1].set_title('Genotype dynamics')
