@@ -7,7 +7,7 @@ from Bio import Align
 from statistics import mean 
 import time
 from collections import Counter
-
+import statistics
 """
 En este script se presentarán las siguientes características:
 - Se tendrá un modelo SIR en el cual los humanos se infectan al contacto con mosquitos infectados.
@@ -160,6 +160,9 @@ class SIRmodel:
         return output_seq
         
     def picking_from_pool (self, dic):
+        if not dic: 
+            ant_ant = len(self.genotype_counts)-2
+            dic =  self.genotype_counts[ant_ant]
         keys = dic.keys()
         values = dic.values()
         if max(values)==1:
@@ -169,7 +172,7 @@ class SIRmodel:
             if len(sequence_int) == 1:
                 sequence = sequence_int[0]
             else:
-                sequence = random.choice(sequence_int)
+                sequence = random.choice(sequence_int)            
         return sequence
     
     def change_state(self):   
@@ -323,12 +326,12 @@ start_time = time.time()
 #model = SIRmodel(100, 600, 5, 10, 0.9, 0.9, 2, 0.2, 1500, 1/10, 4, 10, 6, 3)
 #df_data, df_conteos, list_dic_genotypes = model.run(10)
 sims = 15
-dias = 15
+dias = 40
 estados = 3
 #x,y,z = simulaciones, tiempos, estado
 matriz = np.zeros((sims, dias, estados))
 for i in range(sims):
-    model = SIRmodel(300, 500, 40, 10, 0.95, 0.95, 2, 0.2, 1500, 1/10, 4, 30, 15, 2, 8, 0.6)
+    model = SIRmodel(300, 800, 100, 40, 0.95, 0.95, 2, 0.2, 1500, 1/10, 4, 10, 20, 2, 15, 0.6)
     df_data, df_conteos, list_dic_genotypes = model.run(dias)
     S = df_conteos["S"].tolist()
     I = df_conteos["I"].tolist()
@@ -336,9 +339,7 @@ for i in range(sims):
     matriz[i, :, 0] = S
     matriz[i, :, 1] = I
     matriz[i, :, 2] = R
-print("Aqui está")
-print(list_dic_genotypes)
-print("Aqui acaba")
+    
 # Plot results
 mediaS_total = []
 mediaI_total = []
@@ -390,11 +391,15 @@ axis[0].set_ylabel('Number of Humans')
 axis[0].set_title('Humans dynamics')
 axis[0].legend()
 
+
 union = []
+# Recorro la lista de diccionarios para la ultima simulacion.
 for i in range(len(list_dic_genotypes)):
     union += list(list_dic_genotypes[i].keys())
+# En union están todos los genotipos que aparecieron durante todo el tiempo y se aplica a unique para que no estén repetidos.
 union = np.unique(union)
 df_genotypes = pd.DataFrame(columns=["Genotype", "Time", "Count", "Freq"])
+# Miro cuantas veces está cada uno de esos genotipos en todos los tiempos.
 for i in range(len(union)):
     for j in range(len(list_dic_genotypes)):
         if list_dic_genotypes[j].get(union[i]) is None:
@@ -402,17 +407,23 @@ for i in range(len(union)):
         else: 
             numero = list_dic_genotypes[j].get(union[i])
         total = sum(list_dic_genotypes[j].values())
-        freq = numero/total
+        if total == 0:
+            freq  = 0
+        else: 
+            freq = numero/total
         df_genotypes.loc[len(df_genotypes)] = (union[i], j, numero, freq) 
-        
-    axis[1].plot(times, list(df_genotypes.loc[df_genotypes["Genotype"]==union[i]]["Freq"]), label=union[i])#label=union[i]
+    freqs_seq = list(df_genotypes.loc[df_genotypes["Genotype"]==union[i]]["Freq"])
+    promedio = np.mean(freqs_seq)
+    if promedio >= 0.1:
+        axis[1].plot(times, freqs_seq, label=union[i])
+    else:
+        axis[1].plot(times, freqs_seq)
 axis[1].set_xlabel('Time Step')
 axis[1].set_ylabel('Genotype frequence')
 axis[1].set_title('Genotype dynamics')
 axis[1].legend()
 
 plt.show()
-
 print("--- %s seconds ---" % (time.time() - start_time))
 
 
