@@ -326,12 +326,12 @@ start_time = time.time()
 #model = SIRmodel(100, 600, 5, 10, 0.9, 0.9, 2, 0.2, 1500, 1/10, 4, 10, 6, 3)
 #df_data, df_conteos, list_dic_genotypes = model.run(10)
 sims = 15
-dias = 40
+dias = 30
 estados = 3
 #x,y,z = simulaciones, tiempos, estado
 matriz = np.zeros((sims, dias, estados))
 for i in range(sims):
-    model = SIRmodel(300, 800, 100, 40, 0.95, 0.95, 2, 0.2, 1500, 1/10, 4, 10, 20, 2, 15, 0.6)
+    model = SIRmodel(300, 1500, 30, 70, 0.95, 0.95, 2, 0.2, 1500, 1/10, 4, 10, 20, 2, 15, 0.6)
     df_data, df_conteos, list_dic_genotypes = model.run(dias)
     S = df_conteos["S"].tolist()
     I = df_conteos["I"].tolist()
@@ -421,10 +421,10 @@ for i in range(len(union)):
 axis[1].set_xlabel('Time Step')
 axis[1].set_ylabel('Genotype frequence')
 axis[1].set_title('Genotype dynamics')
-axis[1].legend()
-
-plt.show()
+axis[1].legend(loc='upper right')
 print("--- %s seconds ---" % (time.time() - start_time))
+plt.show()
+
 
 
 """
