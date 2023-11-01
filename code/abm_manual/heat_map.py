@@ -7,6 +7,7 @@ from Bio import Align
 from statistics import mean 
 import time
 from collections import Counter
+import statistics as stats
 
 """
 En este script se presentarán las siguientes características:
@@ -327,111 +328,31 @@ start_time = time.time()
 sims = 30
 dias = 20
 estados = 3
-eb = 0.1
-r = 0.9
 #x,y,z = simulaciones, tiempos, estado
+probs = np.arange(0.1,1,0.1)
+probs = np.append(probs, [0.95,0.97])
 matriz = np.zeros((sims, dias, estados))
-for i in range(sims):
-    model = SIRmodel(500, 1500, 50, 150, eb, eb, r, 0.2, 3000, 1/10, 4, 20, 60, 2, 15, 0.6)
-    df_data, df_conteos, list_dic_genotypes = model.run(dias)
-    S = df_conteos["S"].tolist()
-    I = df_conteos["I"].tolist()
-    R = df_conteos["R"].tolist()
-    matriz[i, :, 0] = S
-    matriz[i, :, 1] = I
-    matriz[i, :, 2] = R
-    
-# Plot results
-mediaS_total = []
-mediaI_total = []
-mediaR_total = []
-quantiles = [50, 95]
 
-# Aca viene toda esa vaina de los intervalos de confianza
-
-statistics_50 = pd.DataFrame(columns=["LowS", "HighS", "LowI", "HighI", "LowR", "HighR"])
-statistics_95 = pd.DataFrame(columns=["LowS", "HighS", "LowI", "HighI", "LowR", "HighR"])
-low_q50 = ((100-50)/2)/100
-high_q50 = 1-low_q50
-
-low_q95 = ((100-95)/2)/100
-high_q95 = 1-low_q95
-
-for t in range(dias):
-    S=matriz[:, t, 0]
-    I=matriz[:, t, 1]
-    R=matriz[:, t, 2]
-    mediaS_t = round(mean(S))
-    mediaS_total.append(mediaS_t)
-    mediaI_t = round(mean(I))
-    mediaI_total.append(mediaI_t)
-    mediaR_t = round(mean(R))
-    mediaR_total.append(mediaR_t)
-    statistics_50.loc[t] = (np.quantile(a= S, q=low_q50), np.quantile(a= S,q=high_q50), np.quantile(a= I, q=low_q50), np.quantile(a= I, q=high_q50), np.quantile(a= R,q=low_q50), np.quantile(a= R,q=high_q50))
-    statistics_95.loc[t] = (np.quantile(a= S, q=low_q95), np.quantile(a= S,q=high_q95), np.quantile(a= I, q=low_q95), np.quantile(a= I, q=high_q95), np.quantile(a= R,q=low_q95), np.quantile(a= R,q=high_q95))
-
-# Plotting
-colors = ["#d62728", "#9467bd", "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"]
-
-figure, axis = plt.subplots(1, 2)
-times =range(dias)
-axis[0].plot(times, mediaS_total, label="S", color=colors[0])
-axis[0].fill_between(times, statistics_95["LowS"], statistics_95["HighS"], alpha=0.2, color=colors[0])
-axis[0].fill_between(times, statistics_50["LowS"], statistics_50["HighS"], alpha=0.3, color=colors[0])
-
-axis[0].plot(times, mediaI_total, label="I", color=colors[1])
-axis[0].fill_between(times, statistics_95["LowI"], statistics_95["HighI"], alpha=0.2, color=colors[1])
-axis[0].fill_between(times, statistics_50["LowI"], statistics_50["HighI"], alpha=0.3, color=colors[1])
-
-axis[0].plot(times, mediaR_total, label="R", color=colors[2])
-axis[0].fill_between(times, statistics_95["LowR"], statistics_95["HighR"], alpha=0.2, color=colors[2])
-axis[0].fill_between(times, statistics_50["LowR"], statistics_50["HighR"], alpha=0.3, color=colors[2])
-
-axis[0].set_xlabel('Time Step')
-axis[0].set_ylabel('Number of Humans')
-axis[0].set_title('Humans dynamics')
-axis[0].legend()
-
-union = []
-for i in range(len(list_dic_genotypes)):
-    union += list(list_dic_genotypes[i].keys())
-union = np.unique(union)
-print(eb, r, len(union))
-df_genotypes = pd.DataFrame(columns=["Genotype", "Time", "Count", "Freq"])
-for i in range(len(union)):
-    for j in range(len(list_dic_genotypes)):
-        if list_dic_genotypes[j].get(union[i]) is None:
-            numero = 0
-        else: 
-            numero = list_dic_genotypes[j].get(union[i])
-        total = sum(list_dic_genotypes[j].values())
-        if total == 0:
-            freq  = 0
-        else: 
-            freq = numero/total
-        df_genotypes.loc[len(df_genotypes)] = (union[i], j, numero, freq) 
-    freqs_seq = list(df_genotypes.loc[df_genotypes["Genotype"]==union[i]]["Freq"])
-    promedio = np.mean(freqs_seq)
-    if promedio >= 0.05:
-        axis[1].plot(times, freqs_seq, label=union[i])
-    else:
-        axis[1].plot(times, freqs_seq)        
-axis[1].set_xlabel('Time Step')
-axis[1].set_ylabel('Genotype frequence')
-axis[1].set_title('Genotype dynamics')
-axis[1].legend(loc='upper right')
-print("--- %s seconds ---" % (time.time() - start_time))
-plt.show()
-
-
-
-
-"""
-Notas:
-Si cuando muta lo pongo a comparar, y la region es muy pequeña, y solo tengo 1 SNP por mutacion por ts, puede que se quede en un loop 
-infinito porque nunca pase el umbral, incluso teniendo como region de mutacion toda la sequencia.
-"""
-
-
-
+import os
+dir_path = os.path.dirname(os.path.realpath(__file__))
+ruta = os.path.join(dir_path, 'heatmap_vals_30sims.csv')
+df_heatmaps = pd.DataFrame(columns=["Value_EB", "Value_R", "Genome_diversity"])
+medianas = []
+for j in probs:
+    for k in probs:
+        temporal = []
+        for i in range(sims):
+            union = []
+            model = SIRmodel(500, 1500, 50, 150, j, j, k, 0.2, 3000, 1/10, 4, 20, 60, 2, 15, 0.6)
+            df_data, df_conteos, list_dic_genotypes = model.run(dias)
+            for l in range(len(list_dic_genotypes)):
+                union += list(list_dic_genotypes[l].keys())
+            union = np.unique(union)
+            temporal.append(len(union))
+        
+        mediana = stats.median(temporal)
+        df_heatmaps.loc[len(df_heatmaps)] = (j, k, mediana) 
             
+df_heatmaps.to_csv(ruta, index=False) 
+#print(df_heatmaps)
+
