@@ -158,10 +158,13 @@ class SIRmodel:
         
     def picking_from_pool (self, dic):
         
-        #TODO revisar esto bien, tipo qué hacer cuando ya todo el mundo es susceptible pero alguien se infecta
-        if not dic: 
-            #ant_ant = len(self.genotype_counts)-3
-            dic =  self.initial_pool()
+        #TODO revisar esto bien, tipo qué hacer cuando ya todo el mundo es susceptible pero alguien se infecta.
+        #SOLVED: se va devolviendo de a uno
+        
+        a = 2
+        while not dic:
+            a+=1
+            dic = self.genotype_counts[len(self.genotype_count)-a]
         keys = dic.keys()
         values = dic.values()
         if max(values)==1:
@@ -321,18 +324,18 @@ class SIRmodel:
 #Esto es pa ver cuanto se demora el código.
 
 start_time = time.time()
-# (n_humans, n_mosquitoes, init_inf_hum, init_inf_mos, encounter_p,  biting_p, hum_t_inf, mutation_p, K, r, mosq_t_inf, amount, length, i_mut_reg, f_mut_reg, threshold):
+# (n_humans, n_mosquitoes, init_inf_hum, init_inf_mos, encounter_p,  biting_p, recovery_p, mutation_p, K, r, mosq_t_inf, amount, length, i_mut_reg, f_mut_reg, threshold):
 #model = SIRmodel(100, 600, 5, 10, 0.9, 0.9, 2, 0.2, 1500, 1/10, 4, 10, 6, 3)
 #df_data, df_conteos, list_dic_genotypes = model.run(10)
 sims = 30
-dias = 20
+dias = 40
 estados = 3
-eb = 0.1
-r = 0.9
+eb = 0.97
+r = 0.95
 #x,y,z = simulaciones, tiempos, estado
 matriz = np.zeros((sims, dias, estados))
 for i in range(sims):
-    model = SIRmodel(500, 1500, 50, 150, eb, eb, r, 0.2, 3000, 1/10, 4, 20, 60, 2, 15, 0.6)
+    model = SIRmodel(500, 1500, 50, 150, eb, eb, r, 0.2, 3000, 1/10, 4, 20, 30, 2, 15, 0.6)
     df_data, df_conteos, list_dic_genotypes = model.run(dias)
     S = df_conteos["S"].tolist()
     I = df_conteos["I"].tolist()
@@ -373,7 +376,7 @@ for t in range(dias):
 # Plotting
 colors = ["#d62728", "#9467bd", "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"]
 
-figure, axis = plt.subplots(1, 2)
+figure, axis = plt.subplots(1,2)
 times =range(dias)
 axis[0].plot(times, mediaS_total, label="S", color=colors[0])
 axis[0].fill_between(times, statistics_95["LowS"], statistics_95["HighS"], alpha=0.2, color=colors[0])
