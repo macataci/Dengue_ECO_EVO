@@ -23,7 +23,7 @@ print(mean, Median, varianza, desv)
 #TODO falta losgistic model
 #evolution rates (reviar mosquito y human) - revisar espacio temporal 
 #samplear de la mediana que tengo de esas evolutionary rates y hacer una distribucion
-# mosquitos tienen eventos de nacimiento y muerte
+#mosquitos tienen eventos de nacimiento y muerte
 #grafica distancia gentica y antigenica
 #meterle 2 años a las simulaciones
 #revisar inmunidades y ADE
@@ -160,8 +160,7 @@ class SIRmodel:
         """ 
         Based on the number of mosquitoes fills the list population_mos with objects of class human. Each one with
         its id, its initial state (S) and an empty string as genotype.
-        """ 
-        
+        """
         for i in range(self.n_mosquitoes):
             state = "S"
             mosquito = Mosquito(i, state, "")
@@ -226,6 +225,8 @@ class SIRmodel:
     def mutation(self, sequence, start, end):
         """
         Binomial para el largo de la secuencia y con eso miro si muta o no cada site
+        
+        
         Poisson y miro para cada valor entre 1 y el largo del genoma, y escojo el de mayor p
         Bootstrap y para cada site saco un valor aleaotrio de la distribucion. con lambda igual a la mediana de los rates de alguna distribucion
         Normal donde asigno los valores para cada 
@@ -314,7 +315,7 @@ class SIRmodel:
         for human in self.population_hum: 
             #cambiar esto a donde sea indexado 
             if human.state == "I": 
-                for mosquito in range(self.population_mos):
+                for mosquito in self.population_mos:
                     if mosquito.state == "S":     
                         if random.random() > self.encounter_p:                    
                             if random.random() > self.biting_p:
@@ -340,19 +341,20 @@ class SIRmodel:
                     human.genotype = new_seq
                                     
             elif human.state == "S":
-                for mosquito in range(self.population_mos):
+                for mosquito in self.population_mos:
                     if mosquito == "I":
                         if random.random() > self.encounter_p:
                             if random.random() > self.biting_p:
                                 human.state ="I"
                                 human.genotype = mosquito.genotype
+                                
                                 """TODO 
                                 if self.coinfection == 0:
                                     break
                                 else:
                                 """
                                 
-        for mosquito in range(self.population_mos):
+        for mosquito in self.population_mos:
             if mosquito == "I":
                 if random.random() > self.die_p:
                     self.population_mos.remove(mosquito)
@@ -431,24 +433,24 @@ class SIRmodel:
 #Esto es pa ver cuanto se demora el código.
 
 start_time = time.time() 
-sims = 1
-dias = 20
+sims = 10
+dias = 30
 estados = 3
 # Parametros modelo
-n_humans = 100
-n_mosquitoes = 200
-init_inf_hum = 1
-init_inf_mos = 2
-encounter_p = 0.9
-biting_p = 0.9
+n_humans = 300
+n_mosquitoes = 900
+init_inf_hum = 20
+init_inf_mos = 80
+encounter_p = 0.95
+biting_p = 0.95
 recovery_p = 0.2
 mutation_p = 0.2
 #r = 1500
 mosq_t_inf = 1/10
-amount = 5
-length = 20
-i_mut_region = 4
-f_mut_region = 10
+amount = 10
+length = 15
+i_mut_region = 6
+f_mut_region = 14
 coinfection = 0
 
 #x,y,z = simulaciones, tiempos, estado
