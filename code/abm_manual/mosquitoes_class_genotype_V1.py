@@ -2,7 +2,7 @@ import random
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
-from IPython.display import display
+#from IPython.display import display
 from Bio import Align
 from statistics import mean 
 import time
@@ -55,7 +55,7 @@ class Human:
         self.genotype = genotype
                
 class SIRmodel:
-    def __init__(self, n_humans, n_mosquitoes, init_inf_hum, init_inf_mos, encounter_p,  biting_p, recovery_p, mutation_p, mosq_t_inf, amount, length, i_mut_region, f_mut_region, coinfection):
+    def __init__(self, n_humans, n_mosquitoes, init_inf_hum, init_inf_mos, encounter_p,  biting_p, recovery_p, mutation_p, mosq_t_inf, amount, length, coinfection):
         
         """
             Args:
@@ -67,13 +67,9 @@ class SIRmodel:
                 bitting_p    (float): probability that the encounter results in a bite from the mosquito
                 recovery_p    float): probablity of recovery
                 mutation_p   (float): mutation rate of the genome
-                K              (int): carrying capacity mosquitoes  YA NO
-                r            (float): constant of proportionality YA NO
                 mosq_t_inf   (float): days that a mosquito is infected
                 amount         (int): number of sequences in the initial pool
                 length         (int): length of the genome
-                i_mut_region   (int): starting position of the mutation region
-                f_mut_region   (int): ending position of the mutation region
                 coinfection   (bool): whether there is coinfection (1) or not(0)
             """
         self.n_humans = n_humans
@@ -95,8 +91,6 @@ class SIRmodel:
         
         self.amount = amount
         self.length = length
-        self.i_mut_reg = i_mut_region
-        self.f_mut_reg = f_mut_region
         self.genotype_counts = []
         self.coinfection = coinfection
         self.dic_initialpool = self.initial_pool()
@@ -221,7 +215,7 @@ class SIRmodel:
         conteo_t0 = Counter(pool)
         return conteo_t0
     
-    def mutation(self, sequence, start, end):
+    def mutation(self, sequence, genome_length):
         """
         Binomial para el largo de la secuencia y con eso miro si muta o no cada site
         
@@ -241,18 +235,17 @@ class SIRmodel:
         letters = ["C", "G", "A", "U"]
         input_seq = list(sequence)
         copy = input_seq.copy()
-        posiciones = list(range(start,end+1))
-        opciones = list(range(1,len(posiciones)+1))
-        cuantos = random.choice(opciones)
-        escogidos = random.sample(posiciones, cuantos)
-        for i in escogidos:
-            letter = random.choice(letters)
-            while input_seq[i] == letter:
+        n, p = 1, 0.1 # number of trials, probability of each trial
+        s = np.random.binomial(n, p, genome_length)
+        for i in range(genome_length):
+            if s[i]==1:
                 letter = random.choice(letters)
-            copy[i] = letter
+                while input_seq[i] == letter:
+                    letter = random.choice(letters)
+                copy[i] = letter
         output_seq = ''.join([elem for elem in copy])
         return output_seq
-        
+                
     def picking_from_pool (self, dic):
         
         #TODO revisar esto bien, tipo qué hacer cuando ya todo el mundo es susceptible pero alguien se infecta.
@@ -330,7 +323,7 @@ class SIRmodel:
                     # TODO aqui va a comparar con cualquiera, falta que compare con todas, o que compare con la más
                     # repetida, y ahí uso la funcion de picking from the pool
                     
-                    new_seq = self.mutation(human.genotype, self.i_mut_reg, self.f_mut_reg)
+                    new_seq = self.mutation(human.genotype, self.length)
                     #index_dic_anterior = len(self.genotype_counts)-1
                     #dic_anterior = self.genotype_counts[index_dic_anterior]
                     #seq_base = random.choice(list(dic_anterior.keys()))
@@ -342,20 +335,21 @@ class SIRmodel:
                                     
             elif human.state == "S":
                 for mosquito in self.population_mos:
-                    if mosquito == "I":
+                    if mosquito.state == "I":
                         if random.random() > self.encounter_p:
                             if random.random() > self.biting_p:
-                                human.state ="I"
-                                human.genotype = mosquito.genotype
-                                
-                                """TODO 
-                                if self.coinfection == 0:
+                                    human.state = "I"
+                                    human.genotype = mosquito.genotype
                                     break
-                                else:
-                                """
+                                    """
+                                    TODO 
+                                    if self.coinfection == 0:
+                                         break
+                                    else:
+                                    """
                                 
         for mosquito in self.population_mos:
-            if mosquito == "I":
+            if mosquito.state == "I":
                 if random.random() > self.die_p:
                     self.population_mos.remove(mosquito)
                     
@@ -437,26 +431,24 @@ sims = 10
 dias = 30
 estados = 3
 # Parametros modelo
-n_humans = 300
-n_mosquitoes = 900
-init_inf_hum = 20
-init_inf_mos = 80
-encounter_p = 0.95
-biting_p = 0.95
-recovery_p = 0.2
+n_humans = 500
+n_mosquitoes = 1500
+init_inf_hum = 50
+init_inf_mos = 150
+encounter_p = 0.97
+biting_p = 0.97
+recovery_p = 0.8
 mutation_p = 0.2
 #r = 1500
 mosq_t_inf = 1/10
-amount = 10
+amount = 15
 length = 15
-i_mut_region = 6
-f_mut_region = 14
 coinfection = 0
 
 #x,y,z = simulaciones, tiempos, estado
 matriz = np.zeros((sims, dias, estados))
-for i in range(sims):
-    model = SIRmodel(n_humans, n_mosquitoes, init_inf_hum, init_inf_mos, encounter_p,  biting_p, recovery_p, mutation_p, mosq_t_inf, amount, length, i_mut_region, f_mut_region, coinfection)
+for i in range(sims):        
+    model = SIRmodel(n_humans, n_mosquitoes, init_inf_hum, init_inf_mos, encounter_p,  biting_p, recovery_p, mutation_p, mosq_t_inf, amount, length, coinfection)
     df_data, df_conteos, list_dic_genotypes = model.run(dias)
     S = df_conteos["S"].tolist()
     I = df_conteos["I"].tolist()
