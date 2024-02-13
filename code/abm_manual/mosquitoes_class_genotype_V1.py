@@ -17,7 +17,6 @@ Median = statistics.median(values)
 varianza = statistics.pvariance(values)
 desv = statistics.pstdev(values)
 print(mean, Median, varianza, desv)
-
 """
 
 #TODO falta losgistic model
@@ -34,8 +33,7 @@ En este script se presentarán las siguientes características:
 - Igualmente, los mosquitos se infectan al picar a humanos infectados.
 - Los mosquitos serán tratados como agentes y se almacenará información como el id, estado de infección y genotipo
 - El genoma asignado a los humanos y mosquitos saldrá de un pool creado inicialmente. Este pool corresponde a genotipos de un mismo serotipo, por lo que 
-    sus distancias genéticas son pequeñas. El genoma asignado será el de mayor frecuencia. Ahora se manejan aminoacidos.
-    #TODO revisar si poner bases, aas o que
+    sus distancias genéticas son pequeñas. El genoma asignado será el de mayor frecuencia. Ahora se manejarán nucleotidos y se hará la traduccion.
 - Se tendrá mutación (pero pequeñita) y cuando esto suceda, esta nueva secuencia se añadirá al pool de ese tiempo y se quitará la que se tenía antes de la mutación.
 - También en caso de recuperación, ese genoma sale del pool, y se recuperan con una probabilidad uniforme. 
 """
@@ -196,7 +194,8 @@ class SIRmodel:
         return proportion
     
     def generate_random_string(self, length):
-        letters = ["A", "R", "N", "D", "C", "E", "Q", "G", "H", "I", "L", "K", "M", "F", "P", "S", "T", "W", "Y", "V"]
+        #letters = ["A", "R", "N", "D", "C", "E", "Q", "G", "H", "I", "L", "K", "M", "F", "P", "S", "T", "W", "Y", "V"]
+        letters = ["C", "G", "A", "U"]
         # Randomly choose characters from letters for the given length of the string
         random_string = ''.join(random.choice(letters) for i in range(length))
         return random_string 
@@ -208,7 +207,7 @@ class SIRmodel:
         
         # La diferencia maxima entre aa es de 3%, y para bases no excede el 6%
         # Por lo que deben tener una similaridad mínima de 97% o 94% respectivamente
-        threshold = 0.6
+        threshold = 0.8
         
         base = self.generate_random_string(self.length)
         pool = [base]
@@ -238,7 +237,8 @@ class SIRmodel:
         DENV3 = 8.55
         DENV4 = 7.91
         """
-        letters = ["A", "R", "N", "D", "C", "E", "Q", "G", "H", "I", "L", "K", "M", "F", "P", "S", "T", "W", "Y", "V"]
+        #letters = ["A", "R", "N", "D", "C", "E", "Q", "G", "H", "I", "L", "K", "M", "F", "P", "S", "T", "W", "Y", "V"]
+        letters = ["C", "G", "A", "U"]
         input_seq = list(sequence)
         copy = input_seq.copy()
         posiciones = list(range(start,end+1))
