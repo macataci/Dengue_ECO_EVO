@@ -2,7 +2,7 @@ import random
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
-from IPython.display import display
+#from IPython.display import display
 import inspect
 from statistics import mean 
 import time
