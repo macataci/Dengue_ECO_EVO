@@ -7,6 +7,7 @@ from Bio import Align
 from statistics import mean 
 import time
 from collections import Counter
+import math
 
 
 #TODO falta losgistic model
@@ -26,27 +27,32 @@ En este script se presentarán las siguientes características:
     sus distancias genéticas son pequeñas. El genoma asignado será el de mayor frecuencia. Ahora se manejarán nucleotidos y se hará la traduccion.
 - Se tendrá mutación (pero pequeñita) y cuando esto suceda, esta nueva secuencia se añadirá al pool de ese tiempo y se quitará la que se tenía antes de la mutación.
 - También en caso de recuperación, ese genoma sale del pool, y se recuperan con una probabilidad uniforme. 
+- Se tiene en cuenta traduccion
+- Se expande a mas de un serotipo
 """
 
 #TODO revisar dinámicas vitales de humanos y mosquitos
 #TODO mirar si crear una clase de tipo genotype 
 #TODO definir escalas de tiempo
 #TODO mi mosquito necesita almacenar su proteina?
+
 class Mosquito:
-    def __init__(self, id, state, genotype): 
+    def __init__(self, id, state, serotype, genotype): 
         self.id = id
         self.state = state
+        self.serotype = serotype
         self.genotype = genotype
         
 class Human:
-    def __init__(self, id, state, genotype, protein): 
+    def __init__(self, id, state, serotype, genotype, protein): 
         self.id = id
         self.state = state
+        self.serotype = serotype
         self.genotype = genotype
         self.protein = protein
-               
+             
 class SIRmodel:
-    def __init__(self, n_humans, n_mosquitoes, init_inf_hum, init_inf_mos, encounter_p,  biting_p, recovery_p, mutation_p, mosq_t_inf, amount, length, coinfection):
+    def __init__(self, n_humans, n_mosquitoes, init_inf_hum, init_inf_mos, encounter_p,  biting_p, recovery_p, mutation_p, mosq_t_inf, amount, length, coinfection, serotypes):
         
         """
             Args:
@@ -62,6 +68,7 @@ class SIRmodel:
                 amount         (int): number of sequences in the initial pool
                 length         (int): length of the genome
                 coinfection   (bool): whether there is coinfection (1) or not(0)
+                seroypes       (int): number of serotypes
             """
         self.n_humans = n_humans
         self.n_mosquitoes = n_mosquitoes
@@ -78,18 +85,20 @@ class SIRmodel:
         self.population_hum = []
         self.population_mos = []
         
-        # related to the genotype pool
+        # related to the genotypes/serotypes
         
         self.amount = amount
         self.length = length
+        self.serotypes = serotypes
         self.genotype_counts = []
         self.protein_counts = []
+        self.serotype_counts = []
         self.coinfection = coinfection
-        self.dic_initialpool = self.initial_pool()
-        
+        #self.dic_initialpool = self.initial_pool()
+        self.pools_list = self.serotype_creation()
         # related to humans
         
-        self.data = pd.DataFrame(columns=["Time_step", "Id", "State", "Genotype", "Protein"])
+        self.data = pd.DataFrame(columns=["Time_step", "Id", "State", "Serotype", "Genotype", "Protein"])
         self.counts = pd.DataFrame(columns=["S", "I", "R"])
         
         self.initialize_pop_hum()
@@ -103,7 +112,7 @@ class SIRmodel:
         
         for i in range(self.n_humans):
             state = "S"
-            human = Human(i, state, [""], "")
+            human = Human(i, state, "", "", "")
             self.population_hum.append(human)
         
         """
@@ -123,16 +132,18 @@ class SIRmodel:
         for human in sample_infected_h:
             index = self.population_hum.index(human)
             self.population_hum[index].state = "I"
-            self.population_hum[index].genotype = self.picking_from_pool(self.dic_initialpool)
+            selected_serotype = random.randint(0, self.serotypes-1)
+            self.population_hum[index].serotype = selected_serotype + 1
+            self.population_hum[index].genotype = self.picking_from_pool(self.pools_list[selected_serotype])
             self.population_hum[index].protein = self.translating_RNA_prot(human.genotype)
-            
+        
         """
         After updating the list population_hum with its corresponding states updates the dataframe data
         filling the ts as 0 for all humans and filling all other info (id, state, genotype) correspondingly.  
         """  
         
         for i in range(len(self.population_hum)):
-            self.data.loc[i]=(0, self.population_hum[i].id, self.population_hum[i].state, self.population_hum[i].genotype, self.population_hum[i].protein)
+            self.data.loc[i]=(0, self.population_hum[i].id, self.population_hum[i].state, self.population_hum[i].serotype, self.population_hum[i].genotype, self.population_hum[i].protein)
         """
         Runs the function conteos for the initial time step (0)
         """
@@ -140,6 +151,7 @@ class SIRmodel:
         self.conteos_SIR(0)
         self.genotype_counting(0)
         self.protein_counting(0)
+        self.serotype_counting(0)
      
     def initialize_pop_mos(self):
         """ 
@@ -148,7 +160,7 @@ class SIRmodel:
         """
         for i in range(self.n_mosquitoes):
             state = "S"
-            mosquito = Mosquito(i, state, "")
+            mosquito = Mosquito(i, state, "", "")
             self.population_mos.append(mosquito)
         
         """ 
@@ -167,7 +179,9 @@ class SIRmodel:
         for mosquito in sample_infected_m:
             index = self.population_mos.index(mosquito)
             self.population_mos[index].state = "I"
-            self.population_mos[index].genotype = self.picking_from_pool(self.dic_initialpool)
+            selected_serotype = random.randint(0, self.serotypes-1)
+            self.population_mos[index].serotype = selected_serotype + 1
+            self.population_mos[index].genotype = self.picking_from_pool(self.pools_list[selected_serotype])
             
         """
         Since we are not really interested on checking the genotype evolution or epidemic dynamics in mosquitoes, we do not
@@ -216,24 +230,88 @@ class SIRmodel:
         # Randomly choose characters from letters for the given length of the string
         random_string = ''.join(random.choice(letters) for i in range(length))
         return random_string 
-      
-    def initial_pool(self):
+    
+    def find_differences(self, str1, str2):
+        differences = []
+        for i, (char1, char2) in enumerate(zip(str1, str2)):
+            if char1 != char2:
+                differences.append(i)
+        return differences
+    
+    def find_similarities(self, str1, str2):
+        similarities = []
+        for i, (char1, char2) in enumerate(zip(str1, str2)):
+            if char1 == char2:
+                similarities.append(i)
+        return similarities
+    
+    def serotype_creation (self):
+        serotype_number = self.serotypes
+        pools = []
+        letters = ["C", "G", "A", "U"]
+        base = self.generate_random_string(self.length)
+        base_seqs = [base]
+        boundaries = [0.65, 0.75]
+        max_needed = (boundaries[1]*self.length)
+        min_needed = (boundaries[0]*self.length)
+        if serotype_number >=2:
+            for i in range(serotype_number):
+                sequence = self.generate_random_string(self.length)
+                similarity = self.calculate_similarity(base, sequence)
+                actual = (similarity*self.length)
+                while similarity > boundaries[1]:
+                    # Necesito reducir similaridad
+                    needing_min = math.ceil(actual-min_needed)
+                    needing_max = math.ceil(actual-max_needed)
+                    to_change = random.randint(needing_min, needing_max)
+                    which = random.sample(self.find_similarities(base, sequence), to_change)
+                    sequence_chars = list(sequence)
+                    for pos in which:
+                        letra = random.choice(letters)
+                        while letra != base[pos]:
+                            sequence_chars[pos] = letra
+                    sequence = ''.join(sequence_chars)
+                    similarity = self.calculate_similarity(base, sequence)
+                while similarity < boundaries[0]:
+                    # Necesito aumentar similaridad
+                    needing_min = math.ceil(min_needed- actual)
+                    needing_max = math.ceil(max_needed - actual)
+                    to_change = random.randint(needing_min, needing_max)
+                    which = random.sample(self.find_differences(base, sequence), to_change)
+                    sequence_chars = list(sequence)
+                    for pos in which:
+                        sequence_chars[pos] = base[pos]
+                    sequence = ''.join(sequence_chars)
+                    similarity = self.calculate_similarity(base, sequence)                   
+                base_seqs.append(sequence)
         
+        for i in range(serotype_number):
+            pool = self.initial_pool(base_seqs[i])
+            pools.append(pool)           
+        return (pools)
+    
+    def initial_pool(self, base):
         # TODO solo se compara con la secuencia base, faltaría que se compararan entre todas pero ahi tiempo
         # computacional crece
-        
         # La diferencia maxima entre aa es de 3%, y para bases no excede el 6%
         # Por lo que deben tener una similaridad mínima de 97% o 94% respectivamente
         # TODO quizás sea bueno poner codon de parada al final de todas
-        threshold = 0.85
-        
-        base = self.generate_random_string(self.length)
+        threshold = 0.94
         pool = [base]
-        for i in range (self.amount-1):
+        for i in range (amount-1):
             sequence = self.generate_random_string(self.length)
             similarity = self.calculate_similarity(base, sequence)
             while similarity < threshold:
-                sequence = self.generate_random_string(self.length)
+                min_needed = (threshold*self.length)
+                actual = (similarity*self.length)
+                needing_min = math.ceil(min_needed-actual)
+                needing_max = math.ceil(self.length-actual)-1
+                to_change = random.randint(needing_min, needing_max)
+                which = random.sample(self.find_differences(base, sequence), to_change)
+                sequence_chars = list(sequence)
+                for pos in which:
+                    sequence_chars[pos] = base[pos]
+                sequence = ''.join(sequence_chars)
                 similarity = self.calculate_similarity(base, sequence)
             pool.append(sequence)
         conteo_t0 = Counter(pool)
@@ -337,25 +415,21 @@ class SIRmodel:
                         if random.random() > self.encounter_p:                    
                             if random.random() > self.biting_p:
                                 mosquito.state = "I"
+                                mosquito.serotype = human.serotype
                                 mosquito.genotype = human.genotype
                                
                 if random.random () > self.gamma:
                     human.state = "R"
+                    human.serotype = ""
                     human.genotype = ""
                     human.protein = ""
                 
                 elif random.random () > self.mutation_p:
                     # TODO aqui va a comparar con cualquiera, falta que compare con todas, o que compare con la más
                     # repetida, y ahí uso la funcion de picking from the pool
+                    # TODO asumiré que sigue siendo el mismo serotipo
                     
                     new_seq = self.mutation(human.genotype, self.length)
-                    #index_dic_anterior = len(self.genotype_counts)-1
-                    #dic_anterior = self.genotype_counts[index_dic_anterior]
-                    #seq_base = random.choice(list(dic_anterior.keys()))
-                    #similarity = self.calculate_similarity(seq_base, new_seq)
-                    #while similarity < self.threshold:
-                     #   new_seq = self.mutation(human.genotype, self.i_mut_reg, self.f_mut_reg)
-                      #  similarity = self.calculate_similarity(seq_base, new_seq)
                     human.genotype = new_seq
                     human.protein = self.translating_RNA_prot(human.genotype)
                                     
@@ -365,6 +439,7 @@ class SIRmodel:
                         if random.random() > self.encounter_p:
                             if random.random() > self.biting_p:
                                     human.state = "I"
+                                    human.serotype = mosquito.serotype
                                     human.genotype = mosquito.genotype
                                     human.protein = self.translating_RNA_prot(human.genotype)
                                     break
@@ -403,7 +478,7 @@ class SIRmodel:
         """
         self.change_state()
         for human in self.population_hum: 
-            self.data.loc[len(self.data)] = (t,  human.id, human.state, human.genotype, human.protein)   
+            self.data.loc[len(self.data)] = (t,  human.id, human.state, human.serotype, human.genotype, human.protein)   
         #self.vital_dynamics()
     
     def conteos_SIR(self, t):
@@ -442,6 +517,12 @@ class SIRmodel:
         conteo_dict = Counter(proteins_list)
         self.protein_counts.append(conteo_dict)    
             
+    def serotype_counting (self, t):
+        
+        serotype_list = list(self.data.loc[(self.data["Time_step"]==t) & (self.data["State"]=="I")]["Serotype"])
+        conteo_dict = Counter(serotype_list)
+        self.serotype_counts.append(conteo_dict)    
+                   
     def run(self, n_steps):
         """
         Corre todo el modelo en los diferentes pasos de tiempo. Con _init_ deja todas las condiciones iniciales, 
@@ -453,22 +534,23 @@ class SIRmodel:
         for t in range(1, n_steps):
             self.update(t)
             self.conteos_SIR(t)
+            self.serotype_counting(t)
             self.genotype_counting(t)
             self.protein_counting(t)
-        return self.data, self.counts, self.genotype_counts, self.protein_counts
+        return self.data, self.counts, self.serotype_counts, self.genotype_counts, self.protein_counts
 
 
 #Esto es pa ver cuanto se demora el código.
 
 start_time = time.time() 
 sims = 3
-dias = 30
+dias = 150
 estados = 3
 # Parametros modelo
-n_humans = 500
-n_mosquitoes = 1500
-init_inf_hum = 50
-init_inf_mos = 150
+n_humans = 50
+n_mosquitoes = 150
+init_inf_hum = 5
+init_inf_mos = 15
 encounter_p = 0.97
 biting_p = 0.97
 recovery_p = 0.8
@@ -478,12 +560,13 @@ mosq_t_inf = 1/10
 amount = 20
 length = 20
 coinfection = 0
+serotipos = 4
 
 #x,y,z = simulaciones, tiempos, estado
 matriz = np.zeros((sims, dias, estados))
 for i in range(sims):        
-    model = SIRmodel(n_humans, n_mosquitoes, init_inf_hum, init_inf_mos, encounter_p,  biting_p, recovery_p, mutation_p, mosq_t_inf, amount, length, coinfection)
-    df_data, df_conteos, list_dic_genotypes, list_dic_proteins = model.run(dias)
+    model = SIRmodel(n_humans, n_mosquitoes, init_inf_hum, init_inf_mos, encounter_p,  biting_p, recovery_p, mutation_p, mosq_t_inf, amount, length, coinfection, serotipos)
+    df_data, df_conteos, list_dic_serotypes, list_dic_genotypes, list_dic_proteins = model.run(dias)
     S = df_conteos["S"].tolist()
     I = df_conteos["I"].tolist()
     R = df_conteos["R"].tolist()
@@ -521,33 +604,37 @@ for t in range(dias):
     statistics_95.loc[t] = (np.quantile(a= S, q=low_q95), np.quantile(a= S,q=high_q95), np.quantile(a= I, q=low_q95), np.quantile(a= I, q=high_q95), np.quantile(a= R,q=low_q95), np.quantile(a= R,q=high_q95))
 
 # Plotting
+
 colors = ["#d62728", "#9467bd", "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"]
 
-figure, axis = plt.subplots(1,3)
-times =range(dias)
-axis[0].plot(times, mediaS_total, label="S", color=colors[0])
-axis[0].fill_between(times, statistics_95["LowS"], statistics_95["HighS"], alpha=0.2, color=colors[0])
-axis[0].fill_between(times, statistics_50["LowS"], statistics_50["HighS"], alpha=0.3, color=colors[0])
+figure, axis = plt.subplots(2,2, figsize=(20, 25))
+times = range(dias)
 
-axis[0].plot(times, mediaI_total, label="I", color=colors[1])
-axis[0].fill_between(times, statistics_95["LowI"], statistics_95["HighI"], alpha=0.2, color=colors[1])
-axis[0].fill_between(times, statistics_50["LowI"], statistics_50["HighI"], alpha=0.3, color=colors[1])
+# PLOT EPI
+axis[0,0].plot(times, mediaS_total, label="S", color=colors[0])
+axis[0,0].fill_between(times, statistics_95["LowS"], statistics_95["HighS"], alpha=0.2, color=colors[0])
+axis[0,0].fill_between(times, statistics_50["LowS"], statistics_50["HighS"], alpha=0.3, color=colors[0])
 
-axis[0].plot(times, mediaR_total, label="R", color=colors[2])
-axis[0].fill_between(times, statistics_95["LowR"], statistics_95["HighR"], alpha=0.2, color=colors[2])
-axis[0].fill_between(times, statistics_50["LowR"], statistics_50["HighR"], alpha=0.3, color=colors[2])
+axis[0,0].plot(times, mediaI_total, label="I", color=colors[1])
+axis[0,0].fill_between(times, statistics_95["LowI"], statistics_95["HighI"], alpha=0.2, color=colors[1])
+axis[0,0].fill_between(times, statistics_50["LowI"], statistics_50["HighI"], alpha=0.3, color=colors[1])
 
-axis[0].set_xlabel('Time Step')
-axis[0].set_ylabel('Number of Humans')
-axis[0].set_title('Humans dynamics')
-axis[0].legend()
+axis[0,0].plot(times, mediaR_total, label="R", color=colors[2])
+axis[0,0].fill_between(times, statistics_95["LowR"], statistics_95["HighR"], alpha=0.2, color=colors[2])
+axis[0,0].fill_between(times, statistics_50["LowR"], statistics_50["HighR"], alpha=0.3, color=colors[2])
 
+#axis[0,0].set_xlabel('Time Step')
+axis[0,0].set_ylabel('Number of Humans')
+axis[0,0].set_title('Humans dynamics')
+axis[0,0].legend()
+
+# PLOT GENOTIPOS
 union = []
 for i in range(len(list_dic_genotypes)):
     union += list(list_dic_genotypes[i].keys())
 union = np.unique(union)
-
 df_genotypes = pd.DataFrame(columns=["Genotype", "Time", "Count", "Freq"])
+
 for i in range(len(union)):
     for j in range(len(list_dic_genotypes)):
         if list_dic_genotypes[j].get(union[i]) is None:
@@ -563,13 +650,15 @@ for i in range(len(union)):
     freqs_seq = list(df_genotypes.loc[df_genotypes["Genotype"]==union[i]]["Freq"])
     promedio = np.mean(freqs_seq)
     if promedio >= 0.05:
-        axis[1].plot(times, freqs_seq, label=union[i])
+        axis[0,1].plot(times, freqs_seq, label=union[i])
     else:
-        axis[1].plot(times, freqs_seq)        
-axis[1].set_xlabel('Time Step')
-axis[1].set_ylabel('Genotype frequence')
-axis[1].set_title('Genotype dynamics')
-axis[1].legend(loc='upper right')
+        axis[0,1].plot(times, freqs_seq)        
+#axis[0, 1].set_xlabel('Time Step')
+axis[0, 1].set_ylabel('Genotype frequence')
+axis[0, 1].set_title('Genotype dynamics')
+axis[0, 1].legend(loc='upper right')
+
+# PLOT PROTEINAS
 
 union_prot = []
 for i in range(len(list_dic_proteins)):
@@ -592,13 +681,45 @@ for i in range(len(union_prot)):
     freqs_prot = list(df_proteins.loc[df_proteins["Protein"]==union_prot[i]]["Freq"])
     promedio = np.mean(freqs_prot)
     if promedio >= 0.05:
-        axis[2].plot(times, freqs_prot, label=union_prot[i])
+        axis[1,0].plot(times, freqs_prot, label=union_prot[i])
     else:
-        axis[2].plot(times, freqs_prot)        
-axis[2].set_xlabel('Time Step')
-axis[2].set_ylabel('Protein frequence')
-axis[2].set_title('Protein dynamics')
-axis[2].legend(loc='upper right')
+        axis[1,0].plot(times, freqs_prot)        
+axis[1,0].set_xlabel('Time Step')
+axis[1,0].set_ylabel('Protein frequence')
+axis[1,0].set_title('Protein dynamics')
+axis[1,0].legend(loc='upper right')
+
+
+# PLOT SEROTIPOS
+union_ser = []
+for i in range(len(list_dic_serotypes)):
+    union_ser += list(list_dic_serotypes[i].keys())
+union_ser = np.unique(union_ser)
+df_serotypes = pd.DataFrame(columns=["Serotype", "Time", "Count", "Freq"])
+
+for i in range(len(union_ser)):
+    for j in range(len(list_dic_serotypes)):
+        if list_dic_serotypes[j].get(union_ser[i]) is None:
+            numero = 0
+        else: 
+            numero = list_dic_serotypes[j].get(union_ser[i])
+        total = sum(list_dic_serotypes[j].values())
+        if total == 0:
+            freq  = 0
+        else: 
+            freq = numero/total
+        df_serotypes.loc[len(df_serotypes)] = (union_ser[i], j, numero, freq) 
+    freqs_ser = list(df_serotypes.loc[df_serotypes["Serotype"]==union_ser[i]]["Freq"])
+    promedio = np.mean(freqs_ser)
+    if promedio >= 0:
+        axis[1,1].plot(times, freqs_ser, label=union_ser[i])
+    else:
+        axis[1,1].plot(times, freqs_ser)        
+axis[1, 1].set_xlabel('Time Step')
+axis[1, 1].set_ylabel('Serotype frequence')
+axis[1, 1].set_title('Serotype dynamics')
+axis[1, 1].legend(loc='upper right')
+
 timef = time.time() - start_time
 print("--- %s seconds ---" % (time.time() - start_time))
 #with open("time.txt", "w") as file:
